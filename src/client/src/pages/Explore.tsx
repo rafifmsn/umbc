@@ -40,8 +40,12 @@ import {
   getDiceBearAvatar,
   getMajorCode,
 } from "@/lib/constants";
-import { LinkedinIcon, GithubIcon } from "@/components/social-icons";
-import { Search, MessageSquare, Globe, ExternalLink } from "lucide-react";
+import {
+  LinkedinIcon,
+  GithubIcon,
+  TwitterIcon,
+} from "@/components/social-icons";
+import { Search, MessageSquare, Globe } from "lucide-react";
 
 interface StudentCardData {
   id: string;
@@ -59,7 +63,9 @@ interface StudentCardData {
   linkedinUrl?: string;
   githubUrl?: string;
   instagramUrl?: string;
+  twitterUrl?: string;
   websiteUrl?: string;
+  resumeUrl?: string;
 }
 
 interface ExploreResponse {
@@ -398,7 +404,6 @@ export const Explore: React.FC = () => {
                       <Avatar className="size-12 rounded-full border border-border/60 shadow-sm">
                         <AvatarImage
                           src={getDiceBearAvatar(student.avatarSeed)}
-                          alt={student.name}
                         />
                         <AvatarFallback className="font-semibold text-xs">
                           {student.name.slice(0, 2).toUpperCase()}
@@ -460,6 +465,18 @@ export const Explore: React.FC = () => {
                       className="size-8 rounded-lg border border-border/60 bg-muted/30 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     >
                       <LinkedinIcon className="size-3.5" />
+                    </a>
+                  )}
+
+                  {student.twitterUrl && (
+                    <a
+                      href={student.twitterUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Twitter / X Profile"
+                      className="size-8 rounded-lg border border-border/60 bg-muted/30 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <TwitterIcon className="size-3.5" />
                     </a>
                   )}
 

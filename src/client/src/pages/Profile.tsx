@@ -157,11 +157,11 @@ export const Profile: React.FC = () => {
                       {data.user.name}
                     </h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      NIM: {data.user.nim} · {data.user.email}
+                      NIM: {data.user.nim}
                     </p>
 
                     <div className="mt-3 flex flex-wrap gap-1.5">
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="outline" className="text-xs">
                         {data.user.semester === 0
                           ? "Graduated"
                           : `SM${data.user.semester}`}
@@ -170,7 +170,7 @@ export const Profile: React.FC = () => {
                         {data.user.degree || "S1"}-
                         {getMajorCode(data.user.major)}
                       </Badge>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="outline" className="text-xs">
                         {getCampusBadge(data.user.campus)}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
@@ -210,7 +210,7 @@ export const Profile: React.FC = () => {
               </div>
 
               {data.user.headline && (
-                <div className="mt-6 border-t border-border pt-4">
+                <div className="mt-6">
                   <p className="text-sm font-medium text-foreground">
                     {data.user.headline}
                   </p>
@@ -218,7 +218,7 @@ export const Profile: React.FC = () => {
               )}
 
               {/* Social Links */}
-              <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-border pt-4">
+              <div className="mt-4 flex flex-wrap items-center gap-4">
                 {data.user.linkedinUrl && (
                   <a
                     href={data.user.linkedinUrl}
@@ -296,7 +296,7 @@ export const Profile: React.FC = () => {
 
           {/* Bio */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <CardTitle>About</CardTitle>
               <CardDescription>
                 Detailed background and technical interests

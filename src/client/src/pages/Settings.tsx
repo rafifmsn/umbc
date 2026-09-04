@@ -36,6 +36,7 @@ export const Settings: React.FC = () => {
   const { user, refreshUser } = useAuth();
 
   // Profile fields
+  const [name, setName] = useState("");
   const [headline, setHeadline] = useState("");
   const [bioMd, setBioMd] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -63,6 +64,7 @@ export const Settings: React.FC = () => {
 
   useEffect(() => {
     if (user) {
+      setName(user.name || "");
       setHeadline(user.headline || "");
       setBioMd(user.bioMd || "");
 
@@ -152,6 +154,7 @@ export const Settings: React.FC = () => {
     const { data, error: err } = await fetchApi("/api/users/me", {
       method: "PATCH",
       body: JSON.stringify({
+        name: name.trim() || undefined,
         headline: headline.trim(),
         bioMd: bioMd.trim(),
         avatarSeed: finalAvatarSeed,
@@ -276,6 +279,22 @@ export const Settings: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Full Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="full-name" className="text-xs">
+                      Full Name
+                    </Label>
+                    <Input
+                      id="full-name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Raden Fatahillah"
+                      maxLength={100}
+                      required
+                      className="text-xs"
+                    />
+                  </div>
+
                   {/* Headline */}
                   <div className="space-y-2">
                     <Label htmlFor="headline" className="text-xs">
@@ -290,7 +309,7 @@ export const Settings: React.FC = () => {
                       className="text-xs"
                     />
                     <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                      <span>Displayed on your explore preview card</span>
+                      <span>Displayed on your profile & previews</span>
                       <span>{headline.length}/120</span>
                     </div>
                   </div>
@@ -308,9 +327,6 @@ export const Settings: React.FC = () => {
                       rows={6}
                       className="resize-none text-xs leading-relaxed"
                     />
-                    <p className="text-[11px] text-muted-foreground">
-                      Markdown formatting is supported.
-                    </p>
                   </div>
                 </CardContent>
 

@@ -92,6 +92,7 @@ export const MyTeams: React.FC = () => {
   const [editTargetFaculty, setEditTargetFaculty] = useState<string>("ALL");
   const [editStartDate, setEditStartDate] = useState("");
   const [editEndDate, setEditEndDate] = useState("");
+  const [editCoverImageUrl, setEditCoverImageUrl] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
   const [deletingTeam, setDeletingTeam] = useState(false);
@@ -160,6 +161,7 @@ export const MyTeams: React.FC = () => {
     setEditTargetFaculty(team.targetFaculty || "ALL");
     setEditStartDate(team.startDate ? team.startDate.split("T")[0] : "");
     setEditEndDate(team.endDate ? team.endDate.split("T")[0] : "");
+    setEditCoverImageUrl(team.coverImageUrl || "");
     setEditError("");
   };
 
@@ -182,6 +184,7 @@ export const MyTeams: React.FC = () => {
         targetFaculty: editTargetFaculty !== "ALL" ? editTargetFaculty : null,
         startDate: editStartDate || null,
         endDate: editEndDate || null,
+        coverImageUrl: editCoverImageUrl.trim() || null,
       }),
     });
 
@@ -401,7 +404,7 @@ export const MyTeams: React.FC = () => {
             <p className="text-sm text-muted-foreground">
               You haven't joined or created any squads yet.
             </p>
-            <Link to="/teams">
+            <Link to="/teams" className="block">
               <Button size="sm" variant="outline">
                 Browse Active Teams
               </Button>
@@ -528,6 +531,19 @@ export const MyTeams: React.FC = () => {
               <p className="text-[11px] text-muted-foreground">
                 Past deadline will automatically close squad recruitment
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-cover-image">
+                Cover Image URL (Optional)
+              </Label>
+              <Input
+                id="edit-cover-image"
+                type="url"
+                placeholder="https://images.unsplash.com/... (leave blank for default)"
+                value={editCoverImageUrl}
+                onChange={(e) => setEditCoverImageUrl(e.target.value)}
+              />
             </div>
 
             <div className="space-y-2">

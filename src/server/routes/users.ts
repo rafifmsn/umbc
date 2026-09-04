@@ -62,7 +62,9 @@ router.get("/", async (c) => {
       linkedinUrl: users.linkedinUrl,
       githubUrl: users.githubUrl,
       instagramUrl: users.instagramUrl,
+      twitterUrl: users.twitterUrl,
       websiteUrl: users.websiteUrl,
+      resumeUrl: users.resumeUrl,
     })
     .from(users)
     .where(whereClause)

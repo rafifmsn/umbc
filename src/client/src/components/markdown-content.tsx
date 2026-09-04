@@ -13,43 +13,7 @@ export const MarkdownContent: React.FC<MarkdownContentProps> = ({
     return null;
   }
 
-  // Parse markdown into tokens/blocks
-  const lines = content.split("\n");
-  const elements: React.ReactNode[] = [];
-
-  let inCodeBlock = false;
-  let codeBlockBuffer: string[] = [];
-  let codeLanguage = "";
-  let listBuffer: React.ReactNode[] = [];
-  let isNumberedList = false;
-
-  const flushList = () => {
-    if (listBuffer.length > 0) {
-      if (isNumberedList) {
-        elements.push(
-          <ol
-            key={`ol-${elements.length}`}
-            className="list-decimal pl-5 space-y-1 text-sm text-foreground/90 my-2"
-          >
-            {listBuffer}
-          </ol>,
-        );
-      } else {
-        elements.push(
-          <ul
-            key={`ul-${elements.length}`}
-            className="list-disc pl-5 space-y-1 text-sm text-foreground/90 my-2"
-          >
-            {listBuffer}
-          </ul>,
-        );
-      }
-      listBuffer = [];
-    }
-  };
-
   const parseInline = (text: string): React.ReactNode => {
-    // Regex for bold, italic, inline code, and links
     const parts: React.ReactNode[] = [];
     let remaining = text;
     let idx = 0;
@@ -61,7 +25,7 @@ export const MarkdownContent: React.FC<MarkdownContentProps> = ({
         parts.push(
           <code
             key={idx++}
-            className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-foreground"
+            className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-foreground font-mono"
           >
             {codeMatch[1]}
           </code>,
@@ -129,16 +93,96 @@ export const MarkdownContent: React.FC<MarkdownContentProps> = ({
     return parts;
   };
 
+  const lines = content.split("\n");
+  const elements: React.ReactNode[] = [];
+
+  let paragraphBuffer: string[] = [];
+  let quoteBuffer: string[] = [];
+  let listBuffer: React.ReactNode[] = [];
+  let isNumberedList = false;
+  let inCodeBlock = false;
+  let codeBlockBuffer: string[] = [];
+  let consecutiveEmptyLines = 0;
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length > 0) {
+      elements.push(
+        <p
+          key={`p-${elements.length}`}
+          className="text-sm text-foreground/90 leading-relaxed"
+        >
+          {paragraphBuffer.map((line, idx) => (
+            <React.Fragment key={idx}>
+              {idx > 0 && <br />}
+              {parseInline(line)}
+            </React.Fragment>
+          ))}
+        </p>,
+      );
+      paragraphBuffer = [];
+    }
+  };
+
+  const flushQuote = () => {
+    if (quoteBuffer.length > 0) {
+      elements.push(
+        <blockquote
+          key={`quote-${elements.length}`}
+          className="border-l-2 border-primary/70 pl-3.5 py-1 italic text-muted-foreground text-sm bg-muted/20 rounded-r"
+        >
+          {quoteBuffer.map((line, idx) => (
+            <React.Fragment key={idx}>
+              {idx > 0 && <br />}
+              {parseInline(line)}
+            </React.Fragment>
+          ))}
+        </blockquote>,
+      );
+      quoteBuffer = [];
+    }
+  };
+
+  const flushList = () => {
+    if (listBuffer.length > 0) {
+      if (isNumberedList) {
+        elements.push(
+          <ol
+            key={`ol-${elements.length}`}
+            className="list-decimal pl-5 space-y-1 text-sm text-foreground/90"
+          >
+            {listBuffer}
+          </ol>,
+        );
+      } else {
+        elements.push(
+          <ul
+            key={`ul-${elements.length}`}
+            className="list-disc pl-5 space-y-1 text-sm text-foreground/90"
+          >
+            {listBuffer}
+          </ul>,
+        );
+      }
+      listBuffer = [];
+    }
+  };
+
+  const flushAll = () => {
+    flushParagraph();
+    flushQuote();
+    flushList();
+  };
+
   lines.forEach((line, i) => {
     const trimmed = line.trim();
 
-    // Code block toggle
+    // Code block handling
     if (trimmed.startsWith("```")) {
       if (inCodeBlock) {
         elements.push(
           <pre
-            key={`code-${i}`}
-            className="rounded-lg bg-muted/60 border border-border/50 p-3 text-xs overflow-x-auto text-foreground my-3"
+            key={`code-${elements.length}`}
+            className="rounded-lg bg-muted/60 border border-border/50 p-3 text-xs overflow-x-auto text-foreground font-mono"
           >
             <code>{codeBlockBuffer.join("\n")}</code>
           </pre>,
@@ -146,10 +190,10 @@ export const MarkdownContent: React.FC<MarkdownContentProps> = ({
         codeBlockBuffer = [];
         inCodeBlock = false;
       } else {
-        flushList();
+        flushAll();
         inCodeBlock = true;
-        codeLanguage = trimmed.slice(3).trim();
       }
+      consecutiveEmptyLines = 0;
       return;
     }
 
@@ -158,19 +202,33 @@ export const MarkdownContent: React.FC<MarkdownContentProps> = ({
       return;
     }
 
-    // Empty line
+    // Empty lines handling
     if (!trimmed) {
-      flushList();
+      flushAll();
+      consecutiveEmptyLines++;
+      // If user typed 2 or more empty lines in raw markdown, insert an intentional extra visual spacer
+      if (consecutiveEmptyLines >= 2) {
+        elements.push(
+          <div
+            key={`spacer-${elements.length}`}
+            className="h-3"
+            aria-hidden="true"
+          />,
+        );
+      }
       return;
     }
 
+    // Reset empty line count when encountering content
+    consecutiveEmptyLines = 0;
+
     // Headings
     if (trimmed.startsWith("### ")) {
-      flushList();
+      flushAll();
       elements.push(
         <h3
-          key={`h3-${i}`}
-          className="text-sm font-bold text-foreground mt-4 mb-1"
+          key={`h3-${elements.length}`}
+          className="text-xs font-bold uppercase tracking-wider text-foreground pt-1"
         >
           {parseInline(trimmed.slice(4))}
         </h3>,
@@ -179,11 +237,11 @@ export const MarkdownContent: React.FC<MarkdownContentProps> = ({
     }
 
     if (trimmed.startsWith("## ")) {
-      flushList();
+      flushAll();
       elements.push(
         <h2
-          key={`h2-${i}`}
-          className="text-base font-bold text-foreground mt-5 mb-1.5"
+          key={`h2-${elements.length}`}
+          className="text-sm font-bold text-foreground pt-1.5"
         >
           {parseInline(trimmed.slice(3))}
         </h2>,
@@ -192,11 +250,11 @@ export const MarkdownContent: React.FC<MarkdownContentProps> = ({
     }
 
     if (trimmed.startsWith("# ")) {
-      flushList();
+      flushAll();
       elements.push(
         <h1
-          key={`h1-${i}`}
-          className="text-lg font-bold text-foreground mt-6 mb-2"
+          key={`h1-${elements.length}`}
+          className="text-base font-bold text-foreground pt-2"
         >
           {parseInline(trimmed.slice(2))}
         </h1>,
@@ -206,20 +264,16 @@ export const MarkdownContent: React.FC<MarkdownContentProps> = ({
 
     // Blockquote
     if (trimmed.startsWith("> ")) {
+      flushParagraph();
       flushList();
-      elements.push(
-        <blockquote
-          key={`quote-${i}`}
-          className="border-l-2 border-primary/60 pl-3 italic text-muted-foreground my-2 text-sm"
-        >
-          {parseInline(trimmed.slice(2))}
-        </blockquote>,
-      );
+      quoteBuffer.push(trimmed.slice(2));
       return;
     }
 
     // Unordered List
     if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+      flushParagraph();
+      flushQuote();
       if (isNumberedList) flushList();
       isNumberedList = false;
       listBuffer.push(<li key={`li-${i}`}>{parseInline(trimmed.slice(2))}</li>);
@@ -229,25 +283,21 @@ export const MarkdownContent: React.FC<MarkdownContentProps> = ({
     // Numbered List
     const numMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
     if (numMatch) {
+      flushParagraph();
+      flushQuote();
       if (!isNumberedList) flushList();
       isNumberedList = true;
       listBuffer.push(<li key={`li-${i}`}>{parseInline(numMatch[2])}</li>);
       return;
     }
 
-    // Paragraph
+    // Regular paragraph line
+    flushQuote();
     flushList();
-    elements.push(
-      <p
-        key={`p-${i}`}
-        className="text-sm text-foreground/90 leading-relaxed my-2"
-      >
-        {parseInline(line)}
-      </p>,
-    );
+    paragraphBuffer.push(line);
   });
 
-  flushList();
+  flushAll();
 
-  return <div className={`space-y-1 ${className}`}>{elements}</div>;
+  return <div className={`space-y-3.5 ${className}`}>{elements}</div>;
 };

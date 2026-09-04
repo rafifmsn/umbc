@@ -385,6 +385,7 @@ router.patch("/:id", requireAuth, async (c) => {
 
   const {
     name,
+    coverImageUrl,
     eventName,
     eventUrl,
     contentMd,
@@ -397,6 +398,9 @@ router.patch("/:id", requireAuth, async (c) => {
 
   const updateData: Record<string, any> = { updatedAt: new Date() };
   if (name) updateData.name = name.trim();
+  if (coverImageUrl !== undefined) {
+    updateData.coverImageUrl = coverImageUrl?.trim() || null;
+  }
   if (eventName) updateData.eventName = eventName.trim();
   if (eventUrl) updateData.eventUrl = eventUrl.trim();
   if (contentMd) updateData.contentMd = contentMd.trim();

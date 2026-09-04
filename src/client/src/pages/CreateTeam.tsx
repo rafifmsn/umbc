@@ -38,8 +38,7 @@ export const CreateTeam: React.FC = () => {
   const [accessType, setAccessType] = useState<string>("OPEN");
   const [maxMembers, setMaxMembers] = useState<string>("5");
   const [targetFaculty, setTargetFaculty] = useState<string>("ALL");
-
-  const [memberInputs, setMemberInputs] = useState<string[]>([""]);
+  const [initialMembers, setInitialMembers] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -52,16 +51,6 @@ export const CreateTeam: React.FC = () => {
       .replace(/\s+/g, "-")
       .slice(0, 50);
     setSlug(generatedSlug);
-  };
-
-  const handleMemberInput = (index: number, val: string) => {
-    const list = [...memberInputs];
-    list[index] = val;
-
-    if (index === list.length - 1 && val.trim().length > 0) {
-      list.push("");
-    }
-    setMemberInputs(list);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,7 +70,8 @@ export const CreateTeam: React.FC = () => {
 
     setSaving(true);
 
-    const validMembers = memberInputs
+    const validMembers = initialMembers
+      .split(",")
       .map((m) => m.trim())
       .filter((m) => m.length > 0);
 
@@ -229,9 +219,7 @@ export const CreateTeam: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="OPEN">Open for public</SelectItem>
-                      <SelectItem value="INVITE_ONLY">
-                        Invite only
-                      </SelectItem>
+                      <SelectItem value="INVITE_ONLY">Invite only</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -301,21 +289,17 @@ export const CreateTeam: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label>Add initial team members (NIM)</Label>
-                <div className="space-y-2">
-                  {memberInputs.map((val, idx) => (
-                    <Input
-                      key={idx}
-                      placeholder="Student NIM (e.g. 41521010001)"
-                      value={val}
-                      onChange={(e) =>
-                        handleMemberInput(idx, e.target.value)
-                      }
-                    />
-                  ))}
-                </div>
+                <Label htmlFor="initial-members">
+                  Add initial team members (NIM)
+                </Label>
+                <Input
+                  id="initial-members"
+                  placeholder="e.g. 41521010001, 41521010002"
+                  value={initialMembers}
+                  onChange={(e) => setInitialMembers(e.target.value)}
+                />
                 <p className="text-[11px] text-muted-foreground">
-                  New row will appear automatically when filled
+                  Separate multiple student NIMs with commas
                 </p>
               </div>
             </CardContent>
