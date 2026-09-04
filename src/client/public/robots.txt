@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /settings
+Disallow: /teams/create
+Disallow: /teams/my
+Disallow: /api/
+
+Sitemap: https://umbc.my.id/sitemap.xml
+

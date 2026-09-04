@@ -1,0 +1,53 @@
+x-logging: &default-logging
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  umbc-app:
+    <<: *default-logging
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: umbc-app
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://umbc_user:${DB_PASSWORD}@umbc-db:5432/umbc_prod
+    depends_on:
+      umbc-db:
+        condition: service_healthy
+    networks:
+      - internal-bridge
+      - caddy_proxy
+
+  umbc-db:
+    <<: *default-logging
+    image: postgres:16-alpine
+    container_name: umbc-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=umbc_prod
+      - POSTGRES_USER=umbc_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal-bridge
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umbc_user -d umbc_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  caddy_proxy:
+    external: true
+  internal-bridge:
+    driver: bridge
+
+volumes:
+  pgdata:

@@ -1,0 +1,21 @@
+services:
+  umbc-db:
+    image: postgres:16-alpine
+    container_name: umbc-db-dev
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=umbc_dev
+      - POSTGRES_USER=umbc_user
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umbc_user -d umbc_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata_dev:

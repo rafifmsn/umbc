@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: umbc_dev
+          POSTGRES_USER: umbc_user
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U umbc_user -d umbc_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://umbc_user:postgres@localhost:5433/umbc_dev
+      PORT: 3000
+      NODE_ENV: test
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v22)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: |
+          bun install
+          cd src/client && bun install && cd ../..
+
+      - name: Run server typecheck
+        run: bunx tsc --noEmit
+
+      - name: Run database migrations
+        run: bun run db:migrate
+
+      - name: Run test suite
+        run: bun test
+
+      - name: Build client production bundle
+        run: bun run build:client
+        env:
+          UMAMI_SITE_URL: https://go.rafifmsn.com/script.js
+          UMAMI_SITE_ID: 272413f1-ac6c-4cfb-866d-8be6027b7aea
