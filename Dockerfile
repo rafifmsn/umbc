@@ -2,6 +2,11 @@
 FROM oven/bun:1-alpine AS client-builder
 WORKDIR /app/client
 
+ARG UMAMI_SITE_URL
+ARG UMAMI_SITE_ID
+ENV UMAMI_SITE_URL=$UMAMI_SITE_URL
+ENV UMAMI_SITE_ID=$UMAMI_SITE_ID
+
 COPY src/client/package.json src/client/bun.lock* ./
 RUN bun install --frozen-lockfile
 

@@ -165,38 +165,30 @@ All scripts can be executed via `bun run <script>`:
 
 ## Production Deployment
 
-### Option A: Complete Docker Compose (App + Database)
-
-For containerized deployment behind a reverse proxy (e.g. Caddy, Nginx):
+Deploy using Docker Compose behind your reverse proxy (e.g., Caddy, Nginx):
 
 ```bash
-# 1. Set environment variables
-export DB_PASSWORD="your-strong-db-password"
+# 1. Create your production .env file
+cat <<EOF > .env
+PORT=3000
+NODE_ENV=production
+DB_PASSWORD="your-strong-production-db-password"
+DATABASE_URL="postgresql://umbc_user:your-strong-production-db-password@umbc-db:5432/umbc_prod"
+
+# Optional Umami Analytics
+UMAMI_SITE_URL=https://go.rafifmsn.com/script.js
+UMAMI_SITE_ID=272413f1-ac6c-4cfb-866d-8be6027b7aea
+EOF
 
 # 2. Build and launch production containers
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-The production container builds the React application, runs migrations on startup, and uses Bun to serve both the Hono API and static client bundles on port `3000`.
-
-### Option B: Bare-Metal / VPS Systemd Service
-
-```bash
-# 1. Install dependencies & build client assets
-bun install --frozen-lockfile
-cd src/client && bun install --frozen-lockfile && cd ../..
-bun run build:client
-
-# 2. Run migrations
-bun run db:migrate
-
-# 3. Serve via Bun in production mode
-NODE_ENV=production bun src/server/index.ts
-```
+The production container builds the React application, automatically applies any pending database migrations on startup, and uses Bun to serve both the Hono API and static client bundles on port `3000`.
 
 ### Automated Database Backups (Cloudflare R2 + Cron)
 
-UMBC includes a non-blocking PostgreSQL snapshot backup script located at [`scripts/backup.sh`](scripts/backup.sh). It dumps the production database via MVCC snapshot, compresses it with gzip, uploads it to Cloudflare R2 using `rclone`, and cleans up temporary files.
+UMBC includes a non-blocking PostgreSQL snapshot backup script located at [`scripts/backup.sh`](scripts/backup.sh). It dumps the production database via MVCC snapshot, compresses it with gzip, uploads it to Cloudflare R2 using `rclone`, and automatically purges old archives.
 
 #### 1. Configure Rclone for Cloudflare R2
 
@@ -222,7 +214,7 @@ Ensure the backup script has execution permissions:
 chmod +x scripts/backup.sh
 ```
 
-#### 3. Schedule via Crontab
+#### 3. Schedule via Crontab (Every 20 Days)
 
 Open your user crontab editor:
 
@@ -230,18 +222,16 @@ Open your user crontab editor:
 crontab -e
 ```
 
-Add the scheduled job at the bottom. Use the **absolute path** to where the repository lives on your server (e.g. `/home/ubuntu/umbc/scripts/backup.sh`):
+Add the scheduled job at the bottom using the **absolute path** to where the repository lives on your server (e.g. `/home/ubuntu/umbc/scripts/backup.sh`):
 
 ```cron
 PATH=/usr/local/bin:/usr/bin:/bin
-0 3 1,20 * * /path/to/your/umbc/scripts/backup.sh >> /var/log/umbc_backup.log 2>&1
+0 3 */20 * * /path/to/your/umbc/scripts/backup.sh >> /var/log/umbc_backup.log 2>&1
 ```
 
-- **`0 3 1,20 * *`**: Runs automatically every ~20 days (on the 1st and 20th of every month at 3:00 AM UTC).
-- **Dedicated Bucket & Auto-Pruning**: Uses the dedicated Cloudflare R2 bucket `umbc-backups` and automatically prunes snapshots older than 45 days (`rclone delete ... --min-age 45d`), keeping at most 2–3 compressed snapshots and isolating retention rules from your other projects.
-- **`PATH=...`**: Ensures the cron process can discover the `docker` and `rclone` binaries.
-- **`>> /var/log/umbc_backup.log 2>&1`**: Captures all output and warnings into a log file for easy monitoring.
-- **Fail-safe**: The script runs out-of-band and uses non-blocking PostgreSQL MVCC reads. Live traffic and student users will never experience downtime or write locks, even during backup execution or if an upload fails.
+- **`0 3 */20 * *`**: Runs automatically every 20 days at 3:00 AM UTC.
+- **Dedicated Bucket & Auto-Pruning**: Backs up to the dedicated Cloudflare R2 bucket `umbc-backups` and automatically deletes snapshots older than 45 days (`--min-age 45d`), keeping at most 2 snapshots (~10MB total) for safe fallback with zero bloat.
+- **Fail-safe**: The script runs out-of-band and uses non-blocking PostgreSQL MVCC reads. Live traffic will never experience downtime or write locks during backup execution.
 
 ## Architecture & Design Details
 

@@ -11,6 +11,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - UMAMI_SITE_URL=${UMAMI_SITE_URL}
+        - UMAMI_SITE_ID=${UMAMI_SITE_ID}
     container_name: umbc-app
     restart: unless-stopped
     environment:

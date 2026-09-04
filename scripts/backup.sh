@@ -15,7 +15,7 @@ echo "[backup] Uploading snapshot to ${TARGET_BUCKET}..."
 if rclone copy "${BACKUP_FILE}" "${TARGET_BUCKET}/"; then
   echo "[backup] Backup completed and uploaded to R2 successfully."
 
-  # Prune backups older than 45 days to keep R2 bucket lightweight and bloat-free
+  # Prune backups older than 45 days to retain at most 2 snapshots (safe fallback, zero bloat)
   echo "[backup] Pruning remote backups older than 45 days..."
   rclone delete "${TARGET_BUCKET}/" --min-age 45d 2>/dev/null || true
 else
