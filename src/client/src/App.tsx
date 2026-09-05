@@ -14,10 +14,12 @@ import { TeamDetail } from "@/pages/TeamDetail";
 import { Profile } from "@/pages/Profile";
 import { Settings } from "@/pages/Settings";
 import { Admin } from "@/pages/Admin";
+import { Toaster } from "@/components/ui/sonner";
 
 export const App: React.FC = () => {
   return (
     <AuthProvider>
+      <Toaster position="top-right" closeButton />
       <BrowserRouter>
         <NuqsAdapter>
           <Routes>

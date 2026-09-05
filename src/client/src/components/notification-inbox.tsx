@@ -26,6 +26,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth, fetchApi } from "@/lib/api";
 import { getDiceBearAvatar } from "@/lib/constants";
+import { toast } from "sonner";
 
 interface NotificationItem {
   id: string;
@@ -109,6 +110,7 @@ export function NotificationInbox() {
     setNotifications([]);
     setUnreadCount(0);
     await fetchApi("/api/notifications", { method: "DELETE" });
+    toast.success("All notifications deleted");
   };
 
   const markAsRead = async (id: string) => {
@@ -123,6 +125,7 @@ export function NotificationInbox() {
     await fetchApi("/api/notifications/read-all", { method: "PATCH" });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
+    toast.success("All notifications marked as read");
   };
 
   React.useEffect(() => {
@@ -175,16 +178,9 @@ export function NotificationInbox() {
         {/* Inbox Header matching docs/top bar.png with aligned close button */}
         <SheetHeader className="p-4 border-b border-border/50 text-left space-y-1">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <SheetTitle className="text-base font-bold tracking-tight text-foreground">
-                Inbox
-              </SheetTitle>
-              {unreadCount > 0 && (
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                  {unreadCount} unread
-                </span>
-              )}
-            </div>
+            <SheetTitle className="text-base font-bold tracking-tight text-foreground">
+              Inbox
+            </SheetTitle>
 
             <div className="flex items-center gap-1">
               {unreadCount > 0 && (

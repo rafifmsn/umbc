@@ -23,6 +23,7 @@ import { DateRangePicker } from "@/components/date-range-picker";
 import { fetchApi } from "@/lib/api";
 import { FACULTIES } from "@/lib/constants";
 import { ImageIcon } from "lucide-react";
+import { toast } from "sonner";
 
 export const CreateTeam: React.FC = () => {
   const navigate = useNavigate();
@@ -39,7 +40,6 @@ export const CreateTeam: React.FC = () => {
   const [maxMembers, setMaxMembers] = useState<string>("5");
   const [targetFaculty, setTargetFaculty] = useState<string>("ALL");
   const [initialMembers, setInitialMembers] = useState("");
-  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleNameInput = (val: string) => {
@@ -55,7 +55,6 @@ export const CreateTeam: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     if (
       !name.trim() ||
@@ -64,7 +63,7 @@ export const CreateTeam: React.FC = () => {
       !eventUrl.trim() ||
       !contentMd.trim()
     ) {
-      setError("Please fill out all required fields (*)");
+      toast.error("Please fill out all required fields (*)");
       return;
     }
 
@@ -96,11 +95,12 @@ export const CreateTeam: React.FC = () => {
     setSaving(false);
 
     if (err) {
-      setError(err);
+      toast.error(err);
       return;
     }
 
     if (data?.team) {
+      toast.success("Squad created successfully!");
       navigate(`/teams/${data.team.slug}`);
     }
   };
@@ -114,7 +114,7 @@ export const CreateTeam: React.FC = () => {
       ]}
     >
       <div className="space-y-6 max-w-3xl mx-auto">
-        <div className="flex items-center justify-between border-b border-border pb-4">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-foreground">
               Create Squad Team
@@ -140,12 +140,6 @@ export const CreateTeam: React.FC = () => {
             </Button>
           </div>
         </div>
-
-        {error && (
-          <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
-            {error}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Card 1: Team Details */}
@@ -351,7 +345,7 @@ export const CreateTeam: React.FC = () => {
           </Card>
 
           {/* Bottom actions: always visible, aligned right */}
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-border">
+          <div className="flex items-center justify-end space-x-3">
             <Link to="/teams">
               <Button type="button" variant="outline" size="sm">
                 Cancel

@@ -14,14 +14,8 @@ import {
 import { fetchApi, useAuth } from "@/lib/api";
 import { getDiceBearAvatar, getCampusBadge } from "@/lib/constants";
 import { MarkdownContent } from "@/components/markdown-content";
-import {
-  ExternalLink,
-  Calendar,
-  Users,
-  Trash2,
-  UserPlus,
-  AlertCircle,
-} from "lucide-react";
+import { ExternalLink, Calendar, Users, Trash2, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 
 interface TeamDetailData {
   team: {
@@ -62,7 +56,6 @@ export const TeamDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [joining, setJoining] = useState(false);
-  const [joinError, setJoinError] = useState("");
 
   const loadTeam = async () => {
     setLoading(true);
@@ -91,14 +84,14 @@ export const TeamDetail: React.FC = () => {
   const handleJoinTeam = async () => {
     if (!data) return;
     setJoining(true);
-    setJoinError("");
     const res = await fetchApi(`/api/teams/${data.team.id}/join`, {
       method: "POST",
     });
     setJoining(false);
     if (res.error) {
-      setJoinError(res.error);
+      toast.error(res.error);
     } else {
+      toast.success("Joined squad successfully!");
       loadTeam();
     }
   };
@@ -109,6 +102,7 @@ export const TeamDetail: React.FC = () => {
     await fetchApi(`/api/teams/${data!.team.id}/members/${userId}`, {
       method: "DELETE",
     });
+    toast.success("Member removed from squad");
     loadTeam();
   };
 
@@ -128,13 +122,6 @@ export const TeamDetail: React.FC = () => {
         <div className="p-8 text-center text-xs text-destructive">{error}</div>
       ) : data ? (
         <div className="space-y-8 max-w-5xl mx-auto">
-          {joinError && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
-              <AlertCircle className="size-4 shrink-0" />
-              <span>{joinError}</span>
-            </div>
-          )}
-
           {/* Header Cover Banner */}
           <div className="relative h-64 w-full overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-950">
             {data.team.coverImageUrl && (

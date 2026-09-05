@@ -46,6 +46,7 @@ import {
   TwitterIcon,
 } from "@/components/social-icons";
 import { Search, MessageSquare, Globe } from "lucide-react";
+import { toast } from "sonner";
 
 interface StudentCardData {
   id: string;
@@ -210,7 +211,9 @@ export const Explore: React.FC = () => {
     setNoteSending(false);
     if (error) {
       setNoteStatus(error);
+      toast.error(error);
     } else {
+      toast.success(`Quick note sent to ${noteRecipient.name}!`);
       setNoteMessage("");
       setNoteRecipient(null);
     }
