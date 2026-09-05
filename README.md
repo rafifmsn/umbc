@@ -1,11 +1,25 @@
-# UMBC
+<p align="center">
+  <img src="./umbc-thumb.jpg" alt="UMBC" width="100%" />
+</p>
 
-[![CI Status](https://github.com/rafifmsn/umbc/actions/workflows/ci.yml/badge.svg)](https://github.com/rafifmsn/umbc/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/github/license/rafifmsn/umbc?color=blue)](LICENSE)
-[![Runtime: Bun](https://img.shields.io/badge/Runtime-Bun-000000?logo=bun&logoColor=white)](https://bun.sh)
-[![Framework: Hono](https://img.shields.io/badge/Framework-Hono-E36002?logo=hono&logoColor=white)](https://hono.dev)
+<p align="center">
+  <a href="https://github.com/rafifmsn/umbc/actions/workflows/ci.yml">
+    <img src="https://github.com/rafifmsn/umbc/actions/workflows/ci.yml/badge.svg" alt="CI Status" />
+  </a>
+  <a href="https://github.com/rafifmsn/umbc/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/rafifmsn/umbc?color=blue" alt="License: MIT" />
+  </a>
+  <a href="https://bun.sh">
+    <img src="https://img.shields.io/badge/Runtime-Bun-000000?logo=bun&logoColor=white" alt="Runtime: Bun" />
+  </a>
+  <a href="https://hono.dev">
+    <img src="https://img.shields.io/badge/Framework-Hono-E36002?logo=hono&logoColor=white" alt="Framework: Hono" />
+  </a>
+</p>
 
-**UMBC (Universitas Mercu Buana Connect)** is a unified web platform designed for students and faculty across Universitas Mercu Buana. It streamlines academic collaboration, student team formation, creative project ideation, peer recruitment, and university-wide announcements with a minimalist, zero-bloat architecture.
+<p align="center">
+  <strong>UMBC (Universitas Mercu Buana Connect)</strong> is a unified web platform designed for students and faculty across Universitas Mercu Buana. It streamlines academic collaboration, student team formation, creative project ideation, peer recruitment, and university-wide announcements with a minimalist, zero-bloat architecture. See the previews <a href="./docs/screens">here</a>.
+</p>
 
 ## Core Features
 
