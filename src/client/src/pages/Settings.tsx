@@ -30,7 +30,8 @@ import {
   FACULTIES,
   SEMESTER_OPTIONS,
 } from "@/lib/constants";
-import { Dices, Check, AlertCircle } from "lucide-react";
+import { Dices } from "lucide-react";
+import { toast } from "sonner";
 
 export const Settings: React.FC = () => {
   const { user, refreshUser } = useAuth();
@@ -59,8 +60,6 @@ export const Settings: React.FC = () => {
   const [resumeUrl, setResumeUrl] = useState("");
 
   const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -140,8 +139,6 @@ export const Settings: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setSuccess(false);
-    setError("");
 
     // Determine final avatar to save: custom URL if entered, else avatarSeed
     const finalAvatarSeed = avatarUrl.trim()
@@ -175,11 +172,10 @@ export const Settings: React.FC = () => {
 
     setSaving(false);
     if (err) {
-      setError(err);
+      toast.error(err || "Failed to update settings");
     } else if (data?.user) {
       await refreshUser();
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3500);
+      toast.success("Settings updated successfully!");
     }
   };
 
@@ -196,20 +192,6 @@ export const Settings: React.FC = () => {
             and portfolio links
           </p>
         </div>
-
-        {error && (
-          <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
-            <AlertCircle className="size-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="flex items-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-3 text-xs text-emerald-500">
-            <Check className="size-4 shrink-0" />
-            <span>Settings updated successfully!</span>
-          </div>
-        )}
 
         <form onSubmit={handleSave}>
           <Tabs defaultValue="profile" className="w-full space-y-6">

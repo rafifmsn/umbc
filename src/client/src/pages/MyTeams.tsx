@@ -45,6 +45,7 @@ import {
   AlertCircle,
   Plus,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface TeamMemberItem {
   id: string;
@@ -94,14 +95,12 @@ export const MyTeams: React.FC = () => {
   const [editEndDate, setEditEndDate] = useState("");
   const [editCoverImageUrl, setEditCoverImageUrl] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
-  const [editError, setEditError] = useState("");
   const [deletingTeam, setDeletingTeam] = useState(false);
 
   // Manage Members Dialog State
   const [managingTeam, setManagingTeam] = useState<MyTeamItem | null>(null);
   const [newMemberNim, setNewMemberNim] = useState("");
   const [addingMember, setAddingMember] = useState(false);
-  const [memberError, setMemberError] = useState("");
 
   const loadMyTeams = async () => {
     setLoading(true);
@@ -133,9 +132,10 @@ export const MyTeams: React.FC = () => {
     setDeletingTeam(false);
 
     if (err) {
-      setEditError(err);
+      toast.error(err);
     } else {
       setEditingTeam(null);
+      toast.success("Squad deleted successfully");
       loadMyTeams();
     }
   };
@@ -147,6 +147,7 @@ export const MyTeams: React.FC = () => {
     await fetchApi(`/api/teams/${team.id}/members/${user.id}`, {
       method: "DELETE",
     });
+    toast.success("You left the squad");
     loadMyTeams();
   };
 
@@ -162,7 +163,6 @@ export const MyTeams: React.FC = () => {
     setEditStartDate(team.startDate ? team.startDate.split("T")[0] : "");
     setEditEndDate(team.endDate ? team.endDate.split("T")[0] : "");
     setEditCoverImageUrl(team.coverImageUrl || "");
-    setEditError("");
   };
 
   const handleSaveTeamEdit = async (e: React.FormEvent) => {
@@ -170,7 +170,6 @@ export const MyTeams: React.FC = () => {
     if (!editingTeam) return;
 
     setSavingEdit(true);
-    setEditError("");
 
     const { error: err } = await fetchApi(`/api/teams/${editingTeam.id}`, {
       method: "PATCH",
@@ -190,9 +189,10 @@ export const MyTeams: React.FC = () => {
 
     setSavingEdit(false);
     if (err) {
-      setEditError(err);
+      toast.error(err);
     } else {
       setEditingTeam(null);
+      toast.success("Squad updated successfully!");
       loadMyTeams();
     }
   };
@@ -202,7 +202,6 @@ export const MyTeams: React.FC = () => {
     if (!managingTeam || !newMemberNim.trim()) return;
 
     setAddingMember(true);
-    setMemberError("");
 
     const { error: err } = await fetchApi(
       `/api/teams/${managingTeam.id}/members`,
@@ -217,9 +216,10 @@ export const MyTeams: React.FC = () => {
 
     setAddingMember(false);
     if (err) {
-      setMemberError(err);
+      toast.error(err);
     } else {
       setNewMemberNim("");
+      toast.success("Member added to squad!");
       const { data } = await fetchApi<{ data: MyTeamItem[] }>("/api/teams/my");
       if (data) {
         setTeams(data.data);
@@ -235,6 +235,7 @@ export const MyTeams: React.FC = () => {
     await fetchApi(`/api/teams/${teamId}/members/${memberUserId}`, {
       method: "DELETE",
     });
+    toast.success("Member removed from squad");
 
     const { data } = await fetchApi<{ data: MyTeamItem[] }>("/api/teams/my");
     if (data) {
@@ -426,12 +427,6 @@ export const MyTeams: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
-          {editError && (
-            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">
-              {editError}
-            </div>
-          )}
-
           <form onSubmit={handleSaveTeamEdit} className="space-y-4 pt-2">
             <div className="space-y-2">
               <Label htmlFor="edit-name">Team Name</Label>
@@ -606,12 +601,6 @@ export const MyTeams: React.FC = () => {
               Add or remove members participating in this team.
             </DialogDescription>
           </DialogHeader>
-
-          {memberError && (
-            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">
-              {memberError}
-            </div>
-          )}
 
           {/* Add member input */}
           <form

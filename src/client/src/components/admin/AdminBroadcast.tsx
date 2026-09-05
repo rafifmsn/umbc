@@ -20,6 +20,7 @@ import {
 import { fetchApi } from "@/lib/api";
 import { CAMPUSES } from "@/lib/constants";
 import { Send, Check, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 export const AdminBroadcast: React.FC = () => {
   const [broadcastTitle, setBroadcastTitle] = useState("");
@@ -49,10 +50,12 @@ export const AdminBroadcast: React.FC = () => {
     setSendingBroadcast(false);
     if (error) {
       setBroadcastError(error);
+      toast.error(error);
     } else {
       setBroadcastTitle("");
       setBroadcastMessage("");
       setBroadcastSuccess(true);
+      toast.success("Broadcast dispatched successfully!");
       setTimeout(() => setBroadcastSuccess(false), 4000);
     }
   };

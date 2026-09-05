@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { fetchApi } from "@/lib/api";
 import { Check, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 export const AdminSystemLinks: React.FC = () => {
   const [helpDocsUrl, setHelpDocsUrl] = useState("");
@@ -57,8 +58,10 @@ export const AdminSystemLinks: React.FC = () => {
     setSaving(false);
     if (err) {
       setError(err);
+      toast.error(err);
     } else {
       setSuccess(true);
+      toast.success("Support links updated successfully!");
       setTimeout(() => setSuccess(false), 3000);
     }
   };
