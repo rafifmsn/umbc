@@ -6,7 +6,7 @@ This document provides a comprehensive technical overview of **Universitas Mercu
 
 UMBC is architectured as a lightweight, cohesive full-stack web application designed for fast startup, low memory footprint, and low operational complexity.
 
-The application utilizes **Bun** as both runtime and package manager, running **Hono** to serve REST endpoints and compile-free static client bundles. The client is a single-page application built with **React 19**, **Vite**, **Tailwind CSS v4**, and **shadcn/ui** (Radix UI primitives). Data persistence is managed via **PostgreSQL 16** and mapped through **Drizzle ORM**.
+The application utilizes **Bun** as both runtime and package manager, running **Hono** to serve REST endpoints and compile-free static client bundles. The client is a single-page application built with **React 19**, **Vite**, **Tailwind CSS v4**, and **shadcn/ui** (Radix UI primitives). Data persistence is managed via **PostgreSQL 16** (mapped through **Drizzle ORM**) and complemented by **Redis 7** for event stream queues and in-memory caching.
 
 ```mermaid
 flowchart TD
@@ -37,15 +37,17 @@ flowchart TD
         SettingsRoutes["/api/settings (Public System Links)"]
     end
 
-    subgraph Database ["Persistence Layer"]
+    subgraph Database ["Persistence & Queue Layer"]
         Drizzle["Drizzle ORM (Type-Safe Query Builder)"]
         Postgres[("PostgreSQL 16 (Port 5433 / 5432)")]
+        Redis[("Redis 7 (Streams & Cache - Port 6379)")]
         Drizzle --> Postgres
     end
 
     UI -- "HTTPS / JSON REST Calls" --> Hono
     AuthMiddleware --> API
     API --> Drizzle
+    API --> Redis
 ```
 
 ## 2. Authentication & Session Flow
@@ -95,40 +97,78 @@ sequenceDiagram
 - **Student (`USER`)**: Create teams, apply to team vacancies, pitch ideas, comment, vote, update semester standing.
 - **Administrator (`ADMIN`)**: Access `/admin`, manage student roles, broadcast targeted notifications by faculty or campus-wide, modify platform support links.
 
-## 3. Notification Architecture
+## 3. Decoupled Notification & Event Ingestion Pipeline
 
-The notification engine handles both point-to-point interactions (team join requests, invitations) and university broadcasts.
+The notification subsystem decouples domain event generation (team invitations, vacancy applications, university broadcasts) from database writes via an asynchronous message broker, token-bucket rate limiter, and in-memory cache layer.
 
 ```mermaid
 flowchart LR
-    subgraph Triggers ["Event Triggers"]
-        T1["User applies to Team Vacancy"]
-        T2["Team Leader accepts/rejects Request"]
-        T3["Admin issues Faculty/All Broadcast"]
+    subgraph Producers ["Domain Event Triggers"]
+        direction TB
+        E1["Team Vacancy Application"]
+        E2["Membership State Transition"]
+        E3["Admin Broadcast (Faculty/All)"]
     end
 
-    subgraph Engine ["Notification Service"]
-        Handler["Hono Route Handler"]
-        Validator["Payload & Permission Validator"]
-        Batcher["Batch Notification Inserter"]
+    subgraph Gateway ["API Gateway & Ingestion"]
+        direction TB
+        Hono["Hono Route Handlers"]
+        Limiter["Token-Bucket Rate Limiter"]
+        Validator["Payload & Permission Guard"]
+        Hono --> Limiter --> Validator
     end
 
-    subgraph Storage ["PostgreSQL"]
-        NotifyTable[("notifications Table")]
+    subgraph Queue ["Message Broker & Buffering"]
+        Stream[("Redis Stream / Event Queue")]
     end
 
-    subgraph ClientDelivery ["Client Inbox"]
-        Badge["Header Bell Indicator (Unread Count)"]
-        Inbox["Notification Popover / Drawer"]
+    subgraph Workers ["Asynchronous Dispatch Engine"]
+        direction TB
+        Consumer["Event Stream Consumer"]
+        Batcher["Fanout & Batch Inserter"]
+        Consumer --> Batcher
     end
 
-    T1 --> Handler
-    T2 --> Handler
-    T3 --> Validator --> Batcher --> Handler
-    Handler --> NotifyTable
-    NotifyTable -- "Polled via GET /api/notifications" --> Badge
-    Badge --> Inbox
+    subgraph Persistence ["Storage & Cache"]
+        direction TB
+        Postgres[("PostgreSQL 16")]
+        Cache[("Redis Cache (Unread Counts)")]
+    end
+
+    subgraph Delivery ["Client Ingestion Layer"]
+        direction TB
+        Badge["Header Bell (Cache Poll)"]
+        Inbox["Paginated Inbox Drawer"]
+    end
+
+    Producers --> Hono
+    Validator -->|Enqueue Job| Stream
+    Stream -->|Dequeue Stream| Consumer
+    Batcher -->|Bulk Insert| Postgres
+    Batcher -->|Incr / Invalidate| Cache
+    Cache -.->|Fast Poll| Badge
+    Postgres -.->|Fetch Detail| Inbox
 ```
+
+### 3.1 Asynchronous Stream Buffering (Redis Streams)
+
+- **Ingestion Decoupling**: Rather than executing synchronous, blocking SQL inserts across multiple rows during high-volume events (e.g., campus-wide administrator broadcasts to thousands of students), the API gateway appends event payloads to a persistent Redis Stream (`stream:notifications`) via `XADD` in $< 1\text{ms}$.
+- **Consumer Groups & Batch Processing**: A background consumer loop evaluates stream entries using `XREADGROUP`, batches notifications into bulk SQL statements, and commits them to PostgreSQL with delivery acknowledgments (`XACK`).
+
+### 3.2 Token-Bucket Rate Limiting Middleware
+
+- Sensitive event ingestion routes (such as `/api/admin/broadcast` and `/api/notifications/note`) are protected by a sliding-window token-bucket rate limiter (`rate-limiter.ts`).
+- Rate counters are evaluated atomically in Redis memory, returning `429 Too Many Requests` with a `Retry-After` header when burst thresholds are breached.
+
+### 3.3 Sub-Millisecond Unread Count Caching ($O(1)$)
+
+- To eliminate repeated `SELECT count(*)` table scans on every client navigation, unread counters are maintained directly in Redis memory (`user:<id>:unread_count`).
+- **Atomic Mutation**: The worker automatically increments the recipient's counter (`INCR`) upon ingestion, while read operations decrement or reset it (`DECR` / `SET 0`).
+- **Lightweight Endpoint**: The client's header indicator polls `GET /api/notifications/unread-count`, resolving in $< 1\text{ms}$ directly from memory without loading PostgreSQL.
+
+### 3.4 Resilient Dual-Mode Fallback
+
+- The pipeline implements strict **graceful degradation**: if the Redis instance is unreachable or goes offline, producer operations detect connection unavailability and fall back directly to synchronous PostgreSQL persistence without throwing unhandled exceptions or stalling user requests.
 
 ## 4. Core Technology Stack Breakdown
 
