@@ -30,7 +30,6 @@ describe("UMBC Backend API Suite", () => {
     } catch (e) {
       console.warn("Cleanup warning:", e);
     }
-    await sql.end();
   });
 
   describe("Health & System Endpoints", () => {

@@ -96,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const loadUnreadCount = async () => {
     const { data } = await fetchApi<{ unreadCount: number }>(
-      "/api/notifications",
+      "/api/notifications/unread-count",
     );
     if (data) {
       setUnreadCount(data.unreadCount);

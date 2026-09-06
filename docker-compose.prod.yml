@@ -20,8 +20,11 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=postgresql://umbc_user:${DB_PASSWORD}@umbc-db:5432/umbc_prod
+      - REDIS_URL=redis://umbc-redis:6379
     depends_on:
       umbc-db:
+        condition: service_healthy
+      umbc-redis:
         condition: service_healthy
     networks:
       - internal-bridge
@@ -42,6 +45,19 @@ services:
       - internal-bridge
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U umbc_user -d umbc_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  umbc-redis:
+    <<: *default-logging
+    image: redis:7-alpine
+    container_name: umbc-redis
+    restart: unless-stopped
+    networks:
+      - internal-bridge
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5

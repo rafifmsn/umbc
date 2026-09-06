@@ -3,6 +3,8 @@ import { eq, ilike, or, sql as dSql } from "drizzle-orm";
 import { db } from "../db/client";
 import { users, teams, notifications, systemSettings } from "../db/schema";
 import { type HonoEnv, requireAdmin } from "../lib/auth";
+import { enqueueNotificationBatch } from "../lib/queue/producer";
+import { rateLimiter } from "../middleware/rate-limiter";
 
 const router = new Hono<HonoEnv>();
 
@@ -44,37 +46,41 @@ router.get("/metrics", async (c) => {
   });
 });
 
-router.post("/broadcast", async (c) => {
-  const body = await c.req.json();
-  const { title, message, targetCampus } = body;
+router.post(
+  "/broadcast",
+  rateLimiter({ maxRequests: 5, windowSeconds: 60, prefix: "rl:broadcast" }),
+  async (c) => {
+    const body = await c.req.json();
+    const { title, message, targetCampus } = body;
 
-  if (!title || !message) {
-    return c.json({ error: "Title and message are required" }, 400);
-  }
+    if (!title || !message) {
+      return c.json({ error: "Title and message are required" }, 400);
+    }
 
-  let recipientsQuery = db.select({ id: users.id }).from(users);
-  if (targetCampus) {
-    recipientsQuery = db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.campus, targetCampus as any)) as any;
-  }
+    let recipientsQuery = db.select({ id: users.id }).from(users);
+    if (targetCampus) {
+      recipientsQuery = db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.campus, targetCampus as any)) as any;
+    }
 
-  const recipients = await recipientsQuery;
+    const recipients = await recipientsQuery;
 
-  if (recipients.length > 0) {
-    const notifsToInsert = recipients.map((r) => ({
-      recipientId: r.id,
-      type: "SYSTEM_BROADCAST" as const,
-      title: title.trim(),
-      message: message.trim(),
-    }));
+    if (recipients.length > 0) {
+      const notifsToInsert = recipients.map((r) => ({
+        recipientId: r.id,
+        type: "SYSTEM_BROADCAST" as const,
+        title: title.trim(),
+        message: message.trim(),
+      }));
 
-    await db.insert(notifications).values(notifsToInsert);
-  }
+      await enqueueNotificationBatch(notifsToInsert);
+    }
 
-  return c.json({ success: true, count: recipients.length });
-});
+    return c.json({ success: true, count: recipients.length });
+  },
+);
 
 router.delete("/users/:id", async (c) => {
   const id = c.req.param("id");

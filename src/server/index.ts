@@ -12,6 +12,11 @@ import adminRoutes from "./routes/admin";
 import { db } from "./db/client";
 import { systemSettings, teams } from "./db/schema";
 import { sql } from "drizzle-orm";
+import { initRedis, closeRedis, isRedisAvailable } from "./lib/redis";
+import {
+  startNotificationWorker,
+  stopNotificationWorker,
+} from "./lib/queue/worker";
 
 const app = new Hono<HonoEnv>();
 
@@ -57,6 +62,7 @@ app.get("/api/health", (c) =>
   c.json({
     status: "healthy",
     runtime: "bun",
+    redis: isRedisAvailable() ? "connected" : "fallback_mode",
     timestamp: new Date().toISOString(),
   }),
 );
@@ -139,6 +145,20 @@ app.get("*", serveStatic({ path: "./src/client/dist/index.html" }));
 
 const port = Number(process.env.PORT) || 3000;
 console.log(`[UMBC Server] Running on Bun at http://localhost:${port}`);
+
+// Initialize Redis and start asynchronous notification stream worker
+initRedis().then(() => {
+  startNotificationWorker();
+});
+
+// Graceful process shutdown
+const shutdown = async () => {
+  stopNotificationWorker();
+  await closeRedis();
+};
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 export { app };
 export default {

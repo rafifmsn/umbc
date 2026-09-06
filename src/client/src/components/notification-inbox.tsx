@@ -192,7 +192,7 @@ export function NotificationInbox() {
                   title="Mark all as read"
                 >
                   <CheckCheck className="size-3.5" />
-                  <span>Mark read</span>
+                  <span>Mark read ({unreadCount})</span>
                 </Button>
               )}
 

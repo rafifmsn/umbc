@@ -3,6 +3,7 @@ import { eq, ilike, and, or, sql as dSql } from "drizzle-orm";
 import { db } from "../db/client";
 import { teams, teamMembers, users, notifications } from "../db/schema";
 import { type HonoEnv, requireAuth } from "../lib/auth";
+import { enqueueNotification } from "../lib/queue/producer";
 
 const router = new Hono<HonoEnv>();
 let lastAutoCloseCheck = 0;
@@ -312,7 +313,7 @@ router.post("/", requireAuth, async (c) => {
           })
           .onConflictDoNothing();
 
-        await db.insert(notifications).values({
+        await enqueueNotification({
           recipientId: memberUser.id,
           senderId: currentUser.id,
           type: "TEAM_INVITE",
@@ -467,7 +468,7 @@ router.post("/:id/members", requireAuth, async (c) => {
     .returning();
 
   if (createdMember) {
-    await db.insert(notifications).values({
+    await enqueueNotification({
       recipientId: memberUser.id,
       senderId: currentUser.id,
       type: "TEAM_INVITE",
@@ -562,7 +563,7 @@ router.post("/:id/join", requireAuth, async (c) => {
   }
 
   // Notify team owner
-  await db.insert(notifications).values({
+  await enqueueNotification({
     recipientId: team.ownerId,
     senderId: currentUser.id,
     type: "TEAM_INVITE",
