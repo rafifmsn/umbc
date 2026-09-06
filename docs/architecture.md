@@ -2,8 +2,6 @@
 
 This document provides a comprehensive technical overview of **Universitas Mercu Buana Connect (UMBC)**, detailing its architectural topology, data flow, component interactions, database schema, and core design principles emphasizing a lean, zero-bloat approach.
 
----
-
 ## 1. System Overview
 
 UMBC is architectured as a lightweight, cohesive full-stack web application designed for fast startup, low memory footprint, and low operational complexity.
@@ -50,8 +48,6 @@ flowchart TD
     API --> Drizzle
 ```
 
----
-
 ## 2. Authentication & Session Flow
 
 Authentication is session-based utilizing secure, HTTP-only cookies (`umbc_session`). This approach eliminates local storage token leaks, CSRF vulnerabilities, and client-side token refresh overhead.
@@ -61,29 +57,43 @@ sequenceDiagram
     autonumber
     actor User as Student / Admin
     participant Client as React Client
-    participant Hono as Hono API Server
+    participant Hono as Hono API Gateway
+    participant Security as Bun Crypto (Argon2id)
     participant DB as PostgreSQL (Drizzle)
 
+    Note over User,DB: Phase 1: Credential Verification & Session Minting
     User->>Client: Submit Credentials (NIM & Password)
-    Client->>Hono: POST /api/auth/sign-in
-    Hono->>DB: Query user by NIM
-    DB-->>Hono: User record & hashed password
-    Hono->>Hono: Verify password hash (Bun.password)
-    Hono->>DB: Insert session (UUID, userId, expiresAt)
-    Hono-->>Client: Set-Cookie: umbc_session=<TOKEN>; HttpOnly; SameSite=Lax
+    Client->>Hono: POST /api/auth/login
+    Hono->>Hono: Validate NIM format (11-12 digit regex)
+    Hono->>DB: Query user by sanitized NIM
+    DB-->>Hono: User record & stored password hash
+    Hono->>Security: Verify hash via Bun.password (Argon2id)
+    Security-->>Hono: Constant-time verification success
+    Hono->>DB: Mint session record (UUID, userId, 30-day TTL)
+    Hono-->>Client: Set-Cookie: umbc_session=TOKEN (HttpOnly, SameSite=Lax)
+
+    Note over User,DB: Phase 2: Middleware Interception & Context Hydration
     Client->>Hono: GET /api/auth/me (Cookie attached)
-    Hono->>DB: Join session & user data
-    DB-->>Hono: User profile, role, semester verification
-    Hono-->>Client: User context JSON { id, name, nim, role, faculty }
-    Client->>User: Render Dashboard & Role-Specific Views
+    Hono->>Hono: authMiddleware extracts & validates session
+    Hono->>DB: Query session validity (NOW < expiresAt)
+    alt Session Valid
+        DB-->>Hono: Session verified
+        Hono->>DB: Fetch user profile & RBAC role
+        DB-->>Hono: User record (role, faculty, semesterUpdatedAt)
+        Hono->>Hono: Check semester recency (>6 months staleness check)
+        Hono-->>Client: 200 OK { user, role, needsSemesterUpdate }
+        Client->>User: Hydrate Context & Render Role-Gated UI
+    else Session Expired / Invalid
+        Hono->>DB: Purge stale session record
+        Hono-->>Client: 401 Unauthorized (Clear cookie header)
+        Client->>User: Route to /sign-in
+    end
 ```
 
 ### Authorization Model
 
 - **Student (`USER`)**: Create teams, apply to team vacancies, pitch ideas, comment, vote, update semester standing.
 - **Administrator (`ADMIN`)**: Access `/admin`, manage student roles, broadcast targeted notifications by faculty or campus-wide, modify platform support links.
-
----
 
 ## 3. Notification Architecture
 
@@ -120,8 +130,6 @@ flowchart LR
     Badge --> Inbox
 ```
 
----
-
 ## 4. Core Technology Stack Breakdown
 
 ### 4.1 Client Layer
@@ -136,8 +144,6 @@ flowchart LR
 - **Bun Runtime**: Provides ultra-fast startup times (< 50ms), native TypeScript execution without transpilation steps, and integrated password hashing via `Bun.password`.
 - **Hono Framework**: Modern, lightweight router with near-zero overhead (< 15KB bundle footprint), built-in CORS, cookie parsers, and static file serving.
 - **Drizzle ORM & drizzle-kit**: Schema-as-code with complete TypeScript type inference. Zero code generation step needed at runtime, resulting in minimal memory overhead.
-
----
 
 ## 5. Anti-Bloat & Performance Rationale
 
@@ -167,8 +173,6 @@ UMBC was designed with a strict **anti-bloat** philosophy. Every dependency and 
 
 - **Problem**: Nested cards within cards, excessive icon containers, and redundant action buttons clutter screen real estate and increase DOM node counts.
 - **Solution**: Clean, flat layout hierarchy (e.g., in `AdminSystemLinks`, Team forms, and Sidebar) with standardized typography, native inputs, and semantic status banners.
-
----
 
 ## 6. Database Schema & Subsystems
 
@@ -241,8 +245,6 @@ erDiagram
 
 - Dynamic configuration endpoints (`help_docs_url`, `support_email`) reside in the `system_settings` table.
 - Allows administrators to point documentation and support icons to external forms (e.g., Google Forms, ticketing systems, or direct mailto links) without rebuilding or restarting the application.
-
----
 
 ## 7. Security & Deployment Posture
 
